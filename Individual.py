@@ -1,12 +1,12 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 
+import argparse
+import os.path
 import sys
 import json
 import jsonschema
 from jsonschema import validate
-import argparse
-import os.path
 
 
 schema = {
