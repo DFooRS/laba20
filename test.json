@@ -13,5 +13,15 @@
         "product": "котлеты",
         "shop": "магнит",
         "cost": 249
+    },
+    {
+        "product": "телефон",
+        "shop": "днс",
+        "cost": "30000"
+    },
+    {
+        "product": "кружка",
+        "shop": "fixprice",
+        "cost": "200"
     }
 ]
