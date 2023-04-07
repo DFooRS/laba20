@@ -1,29 +1,12 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 
-import argparse
 import os.path
-import sys
 import click
 import json
 import jsonschema
 from jsonschema import validate
-
-
-schema = {
-    "type": "object",
-    "properties": {
-        "product": {
-            "type": "string"
-        },
-        "shop": {
-            "type": "string"
-        },
-        "cost": {
-            "type": "number"
-        }
-    }
-}
+from prod_schema import schema
 
 
 def add_product(products, prod, shop, cost):
@@ -53,7 +36,12 @@ def load_products(file_name):
     Загрузить список всех товаров из файла JSON
     """
     with open(file_name, "r", encoding="utf-8") as fin:
-        return json.load(fin)
+        products = json.load(fin)
+    for prod in products:
+        is_valid, msg = validation(prod)
+        print(prod)
+        print(msg)
+    return products
 
 
 def product_list(products):
@@ -87,17 +75,6 @@ def product_list(products):
             print(line)
 
 
-def select(products, shop):
-    """
-    Выбрать товары из конкретного магазина.
-    """
-    result = []
-    for product in products:
-        if product.get('shop', '') == shop:
-            result.append(product)
-    return result
-
-
 def validation(json_data):
     """
     Валидация данных
@@ -110,45 +87,70 @@ def validation(json_data):
     msg = "Данные успешно загружены"
     return True, msg
 
-@click.command()
-@click.argument('command')
-@click.argument('filename')
-@click.option('--name', help='Название продукта')
-@click.option('--shop', help='Название магазина')
-@click.option('--cost', help='Стоимость товара')
 
-def main(command, filename, name, shop, cost):
+def select_products(products, shop):
+    """
+    Выбрать товары из конкретного магазина.
+    """
+    result = []
+    for product in products:
+        if product.get('shop', '') == shop:
+            result.append(product)
+    return result
+
+
+@click.group()
+@click.pass_context
+def main(ctx):
     """
     Главная функция программы.
     """
-    is_dirty = False
+    ctx.ensure_object(dict)
+
+
+@main.command()
+@click.pass_context
+@click.argument('filename', type=click.Path(exists=True))
+@click.option('--name', prompt='Введите название товара')
+@click.option('--shop', prompt='Введите название магазина')
+@click.option('--cost', prompt='Введите стоимость товара', type=float)
+def add(ctx, filename, name, shop, cost):
+    """
+    Добавить новый товар.
+    """
     if os.path.exists(filename):
         products = load_products(filename)
     else:
         products = []
 
-    if command == 'add':
-        name = click.prompt("Введите название товара: ")
-        shop = click.prompt("Введите название магазина: ")
-        cost = click.prompt("Введите стоимость товара: ")
-        products = add_product(
-            products,
-            name,
-            shop,
-            cost
-        )
-        is_dirty = True
+    products = add_product(products, name, shop, cost)
+    save_products(filename, products)
 
-    elif command == 'list':
+
+@main.command()
+@click.pass_context
+@click.argument('filename', type=click.Path(exists=True))
+def list(ctx, filename):
+    """
+    Отобразить список товаров.
+    """
+    if os.path.exists(filename):
+        products = load_products(filename)
         product_list(products)
 
-    elif command == 'select':
-        shop = click.prompt("Введите название магазина: ")
-        selected = select(products, shop)
-        product_list(selected)
 
-    if is_dirty:
-        save_products(filename, products)
+@main.command()
+@click.pass_context
+@click.argument('filename', type=click.Path(exists=True))
+@click.option('--shop', prompt='Введите название магазина')
+def select(ctx, filename, shop):
+    """
+    Выбрать товары из магазина.
+    """
+    if os.path.exists(filename):
+        products = load_products(filename)
+        selected = select_products(products, shop)
+        product_list(selected)
 
 
 if __name__ == '__main__':
